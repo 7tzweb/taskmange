@@ -8,6 +8,9 @@ import DataGrid, {
   FilterRow,
   HeaderFilter,
   ColumnChooser,
+  Export,
+  Toolbar,
+  Item,
 } from 'devextreme-react/data-grid';
 import { fetchTasks, fetchUsers } from '../api.js';
 
@@ -121,6 +124,11 @@ function CompletedTasksPage() {
           <GroupPanel visible emptyPanelText="גררו כותרת לכאן לקיבוץ" />
           <Grouping contextMenuEnabled />
           <ColumnChooser enabled />
+          <Export enabled allowExportSelectedData />
+          <Toolbar>
+            <Item name="exportButton" />
+            <Item name="searchPanel" />
+          </Toolbar>
           <Paging defaultPageSize={10} />
 
           <Column dataField="title" caption="כותרת" />
