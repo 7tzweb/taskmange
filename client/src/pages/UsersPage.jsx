@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchUsers, createUser, updateUser } from '../api.js';
+import { fetchUsers, createUser, updateUser, deleteUser } from '../api.js';
 
 const emptyUser = { id: '', name: '', email: '' };
 
@@ -25,6 +25,13 @@ function UsersPage() {
       await createUser(userForm);
     }
     setUserForm(emptyUser);
+    loadUsers();
+  };
+
+  const removeUser = async (id) => {
+    await deleteUser(id);
+    // if editing the same user, reset form
+    if (userForm.id === id) setUserForm(emptyUser);
     loadUsers();
   };
 
@@ -79,9 +86,19 @@ function UsersPage() {
                 <strong>{u.name}</strong>
                 <p className="muted small">{u.email || 'אין אימייל'}</p>
               </div>
-              <button type="button" className="ghost" onClick={() => setUserForm(u)}>
-                ערוך
-              </button>
+              <div className="actions inline-actions">
+                <button type="button" className="ghost action-pill" onClick={() => setUserForm(u)} title="עריכה">
+                  ✏️
+                </button>
+                <button
+                  type="button"
+                  className="danger ghost action-pill"
+                  onClick={() => removeUser(u.id)}
+                  title="מחיקה"
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
           ))}
           {users.length === 0 && <p className="muted">עוד לא נוספו משתמשים.</p>}

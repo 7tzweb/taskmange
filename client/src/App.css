@@ -1,12 +1,14 @@
 :root {
-  --bg: #f7f9fb;
+  --bg: #f9fbfd;
   --panel: #ffffff;
-  --border: #e5e7eb;
-  --text: #1f2937;
-  --muted: #6b7280;
+  --panel-2: #ffffff;
+  --border: rgba(0, 0, 0, 0.06);
+  --text: #0f172a;
+  --muted: #5f6b7a;
   --accent: #2563eb;
   --accent-2: #10b981;
   --radius: 16px;
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
 .app-shell {
@@ -16,11 +18,118 @@
 }
 
 .topbar {
-  padding: 28px 40px 0;
+  padding: 20px 40px 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+.topbar-subnav {
+  display: flex;
+  align-items: center;
+}
+
+.mega-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 36px;
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.mega-list {
+  list-style: none;
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+  margin-left: auto; /* pushes links to the right side */
+}
+
+.mega-nav .logo {
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  order: 2; /* keep logo on the left when links are pushed right */
+}
+
+.mega-item a,
+.mega-item button {
+  background: transparent;
+  border: none;
+  font: inherit;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.15s ease;
+  text-decoration: none;
+}
+
+.mega-item a:hover,
+.mega-item button:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 115%;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  display: none;
+  min-width: 180px;
+  padding: 12px;
+  z-index: 30;
+}
+
+.dropdown.open .dropdown-menu {
+  display: grid;
+  gap: 10px;
+}
+
+.dropdown-menu a {
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--text);
+}
+
+.dropdown-menu a:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.subnav {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0 8px;
+}
+
+.subnav a {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  text-decoration: none;
+  color: var(--text);
+  transition: 0.15s ease;
+}
+
+.subnav a.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
 }
 
 .topbar h1 {
@@ -46,13 +155,14 @@
   border-radius: 12px;
   text-decoration: none;
   transition: 0.2s ease;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .nav a.active {
   border-color: var(--accent);
   color: var(--accent);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
 }
 
 .page {
@@ -60,11 +170,11 @@
 }
 
 .card {
-  background: var(--panel);
+  background: linear-gradient(140deg, var(--panel), var(--panel-2));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 22px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow);
 }
 
 .hero {
@@ -173,11 +283,12 @@ button {
   border: none;
   padding: 10px 14px;
   border-radius: 12px;
-  background: linear-gradient(120deg, var(--accent), #3b82f6);
-  color: #fff;
+  background: linear-gradient(120deg, rgba(37, 99, 235, 0.16), rgba(16, 185, 129, 0.18));
+  color: #0f172a;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.15s ease;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 }
 
 button:hover {
@@ -186,9 +297,9 @@ button:hover {
 }
 
 button.ghost {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.7);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: none;
 }
 
@@ -206,7 +317,7 @@ button.danger {
   border: 1px dashed var(--border);
   border-radius: 12px;
   padding: 12px;
-  background: #fafbfd;
+  background: #fff;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -246,7 +357,7 @@ button.danger {
   gap: 10px;
   padding: 10px;
   border-radius: 12px;
-  background: #f9fafb;
+  background: #fff;
   border: 1px solid var(--border);
 }
 
@@ -273,7 +384,17 @@ button.danger {
   max-height: 90vh;
   overflow: auto;
   padding: 18px 20px 22px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow);
+}
+
+.modal.modal-wide {
+  width: min(1400px, 98vw);
+  max-height: 95vh;
+}
+
+.guide-content {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
 }
 
 .step-inline {
@@ -318,8 +439,21 @@ button.danger {
   font-size: 16px;
 }
 
+.editor-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+  min-height: 320px;
+  width: 100%;
+}
+
+.editor-wrapper .ck.ck-editor__editable_inline {
+  min-height: 320px;
+}
+
 .progress {
-  background: #eef2ff;
+  background: #eef2f7;
   border-radius: 999px;
   position: relative;
   height: 12px;
@@ -361,21 +495,22 @@ button.danger {
   border-radius: 10px;
   font-size: 12px;
   font-weight: 700;
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .pill-open {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: rgba(15, 140, 255, 0.18);
+  color: #0f4eb8;
 }
 
 .pill-in-progress {
-  background: #fff7ed;
-  color: #c2410c;
+  background: rgba(255, 207, 134, 0.25);
+  color: #a45c00;
 }
 
 .pill-done {
-  background: #ecfdf3;
-  color: #15803d;
+  background: rgba(70, 224, 180, 0.22);
+  color: #0f7a52;
 }
 
 .hero .stats {

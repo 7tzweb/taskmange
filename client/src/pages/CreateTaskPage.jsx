@@ -437,12 +437,6 @@ const addStep = () => {
           />
           <Column dataField="title" caption="כותרת" />
           <Column
-            dataField="flag"
-            caption="סימון"
-            width={80}
-            cellRender={({ data }) => (data.flag ? <span className="pill pill-flag">⚑</span> : null)}
-          />
-          <Column
             dataField="userId"
             caption="משתמש"
             lookup={{ dataSource: users, valueExpr: 'id', displayExpr: 'name' }}

@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  font-family: 'Assistant', 'Space Grotesk', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
   text-rendering: optimizeLegibility;
@@ -15,7 +15,7 @@
 
 body {
   margin: 0;
-  background: #f7f9fb;
+  background: #f9fbfd;
 }
 
 a {
