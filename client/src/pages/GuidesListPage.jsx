@@ -97,6 +97,7 @@ function GuidesListPage() {
           showBorders={false}
           loadPanel={{ enabled: loading }}
           sorting={{ mode: 'multiple' }}
+          onExporting={() => {}}
         >
           <SearchPanel visible placeholder="חיפוש בגריד..." />
           <FilterRow visible />

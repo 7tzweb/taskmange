@@ -11,10 +11,11 @@ import ComingSoon from './pages/ComingSoon.jsx';
 import GuidesListPage from './pages/GuidesListPage.jsx';
 import GuideCreatePage from './pages/GuideCreatePage.jsx';
 import CategoryCreatePage from './pages/CategoryCreatePage.jsx';
+import InfoPage from './pages/InfoPage.jsx';
 import './App.css';
 
 function AppShell() {
-  const [dropdownState, setDropdownState] = useState({ tasks: false, guides: false });
+  const [dropdownState, setDropdownState] = useState({ tasks: false, guides: false, info: false });
   const closeTimer = useRef({});
 
   useEffect(() => {
@@ -41,6 +42,7 @@ function AppShell() {
     path.startsWith('/users') ||
     path.startsWith('/templates');
   const isGuidesSection = path.startsWith('/guides') || path.startsWith('/categories');
+  const isInfoSection = path.startsWith('/info');
 
   return (
     <div className="app-shell">
@@ -77,11 +79,21 @@ function AppShell() {
               <NavLink to="/categories">יצירת קטגוריה</NavLink>
             </div>
           </li>
-          <li className="mega-item">
-            <NavLink to="/services">שירותים</NavLink>
+          <li
+            className={`mega-item dropdown ${dropdownState.info ? 'open' : ''}`}
+            onMouseEnter={() => openDropdown('info')}
+            onMouseLeave={() => scheduleCloseDropdown('info')}
+          >
+            <button type="button" onClick={() => setDropdownState((s) => ({ ...s, info: !s.info }))}>
+              מידע ▾
+            </button>
+            <div className="dropdown-menu">
+              <NavLink to="/info">מידע כללי</NavLink>
+              <NavLink to="/info?tab=bot">הבוט</NavLink>
+            </div>
           </li>
           <li className="mega-item">
-            <NavLink to="/info">מידע</NavLink>
+            <NavLink to="/services">שירותים</NavLink>
           </li>
           <li className="mega-item">
             <NavLink to="/tools">כלי עזר</NavLink>
@@ -101,23 +113,28 @@ function AppShell() {
           </p>
         </div>
         <div className="topbar-subnav">
-          {isTasksSection && (
-            <div className="subnav">
-              <NavLink to="/summary">סיכום משימות</NavLink>
-              <NavLink to="/completed">משימות שהושלמו</NavLink>
-              <NavLink to="/tasks">יצירת משימה</NavLink>
-              <NavLink to="/users">משתמשים</NavLink>
-              <NavLink to="/templates">טמפלייטים</NavLink>
-              <NavLink to="/">בית</NavLink>
-            </div>
-          )}
-          {isGuidesSection && (
-            <div className="subnav">
-              <NavLink to="/guides">כל המדריכים</NavLink>
-              <NavLink to="/guides/new">יצירת מדריך</NavLink>
-              <NavLink to="/categories">קטגוריות</NavLink>
-            </div>
-          )}
+        {isTasksSection && (
+          <div className="subnav">
+            <NavLink to="/summary">סיכום משימות</NavLink>
+            <NavLink to="/completed">משימות שהושלמו</NavLink>
+            <NavLink to="/tasks">יצירת משימה</NavLink>
+            <NavLink to="/users">משתמשים</NavLink>
+            <NavLink to="/templates">טמפלייטים</NavLink>
+          </div>
+        )}
+        {isGuidesSection && (
+          <div className="subnav">
+            <NavLink to="/guides">כל המדריכים</NavLink>
+            <NavLink to="/guides/new">יצירת מדריך</NavLink>
+            <NavLink to="/categories">קטגוריות</NavLink>
+          </div>
+        )}
+        {isInfoSection && (
+          <div className="subnav">
+            <NavLink to="/info">מידע כללי</NavLink>
+            <NavLink to="/info?tab=bot">הבוט</NavLink>
+          </div>
+        )}
         </div>
       </header>
 
@@ -133,7 +150,7 @@ function AppShell() {
           <Route path="/guides/new" element={<GuideCreatePage />} />
           <Route path="/categories" element={<CategoryCreatePage />} />
           <Route path="/services" element={<ComingSoon title="שירותים" />} />
-          <Route path="/info" element={<ComingSoon title="מידע" />} />
+          <Route path="/info" element={<InfoPage />} />
           <Route path="/tools" element={<ComingSoon title="כלי עזר" />} />
           <Route path="/favorites" element={<ComingSoon title="מועדפים" />} />
         </Routes>

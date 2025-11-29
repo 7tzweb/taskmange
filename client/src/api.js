@@ -34,3 +34,12 @@ export const fetchGuides = async (params = {}) => (await api.get('/guides', { pa
 export const createGuide = async (payload) => (await api.post('/guides', payload)).data;
 export const updateGuide = async (id, payload) => (await api.put(`/guides/${id}`, payload)).data;
 export const deleteGuide = async (id) => api.delete(`/guides/${id}`);
+
+// Notes (Info)
+export const fetchNotes = async (params = {}) => (await api.get('/notes', { params })).data;
+export const createNote = async (payload) => (await api.post('/notes', payload)).data;
+export const updateNote = async (id, payload) => (await api.put(`/notes/${id}`, payload)).data;
+export const deleteNote = async (id) => api.delete(`/notes/${id}`);
+
+// Bot
+export const askBot = async (payload) => (await api.post('/bot', payload)).data;

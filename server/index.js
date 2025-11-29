@@ -10,6 +10,8 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
+const stripHtml = (html = '') => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 const redis = createClient({ url: redisUrl, socket: { reconnectStrategy: () => false } });
 let redisReady = false;
@@ -33,6 +35,7 @@ const KEYS = {
   tasks: 'tasks',
   categories: 'categories',
   guides: 'guides',
+  notes: 'notes',
 };
 
 const ensureCollections = async () => {
@@ -304,6 +307,111 @@ app.delete('/api/guides/:id', async (req, res) => {
     await writeList(KEYS.guides, guides);
   }
   res.sendStatus(204);
+});
+
+// Notes (Info)
+app.get('/api/notes', async (req, res) => {
+  const { search = '' } = req.query;
+  const text = search.toLowerCase();
+  let notes = await readList(KEYS.notes);
+  if (text) {
+    notes = notes.filter(
+      (n) => n.title.toLowerCase().includes(text) || (n.content || '').toLowerCase().includes(text)
+    );
+  }
+  res.json(notes);
+});
+
+app.post('/api/notes', async (req, res) => {
+  const { title = '', content = '' } = req.body;
+  if (!title && !content) return res.status(400).json({ error: 'Title or content is required' });
+  const notes = await readList(KEYS.notes);
+  const note = {
+    id: nanoid(),
+    title,
+    content,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  notes.push(note);
+  await writeList(KEYS.notes, notes);
+  res.status(201).json(note);
+});
+
+app.put('/api/notes/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, content } = req.body;
+  const notes = await readList(KEYS.notes);
+  const note = notes.find((n) => n.id === id);
+  if (!note) return res.status(404).json({ error: 'Note not found' });
+  note.title = title ?? note.title;
+  note.content = content ?? note.content;
+  note.updatedAt = new Date().toISOString();
+  await writeList(KEYS.notes, notes);
+  res.json(note);
+});
+
+app.delete('/api/notes/:id', async (req, res) => {
+  const { id } = req.params;
+  const notes = await readList(KEYS.notes);
+  const idx = notes.findIndex((n) => n.id === id);
+  if (idx !== -1) {
+    notes.splice(idx, 1);
+    await writeList(KEYS.notes, notes);
+  }
+  res.sendStatus(204);
+});
+
+// Bot using DB content
+app.post('/api/bot', async (req, res) => {
+  const { question = '' } = req.body;
+  const text = question.toLowerCase();
+  const [notes, guides] = await Promise.all([readList(KEYS.notes), readList(KEYS.guides)]);
+
+  const corpus = [
+    ...notes.map((n) => ({
+      type: 'note',
+      title: n.title || 'Note',
+      content: n.content || '',
+      source: 'note',
+    })),
+    ...guides.map((g) => ({
+      type: 'guide',
+      title: g.title || 'Guide',
+      content: g.content || '',
+      categoryName: g.categoryName || '',
+      source: 'guide',
+    })),
+  ];
+
+  const scored = corpus
+    .map((item) => {
+      const hay = `${item.title} ${item.content}`.toLowerCase();
+      const score = text
+        .split(/\s+/)
+        .filter(Boolean)
+        .reduce((acc, term) => (hay.includes(term) ? acc + 1 : acc), 0);
+      return { ...item, score };
+    })
+    .filter((i) => i.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+
+  const answer =
+    scored.length > 0
+      ? scored
+          .map((i, idx) => {
+            const clean = stripHtml(i.content || '').slice(0, 320);
+            const where =
+              i.source === 'guide'
+                ? `נמצא במודול "מדריכים" — במדריך בשם "${i.title}"${i.categoryName ? ` (קטגוריה: ${i.categoryName})` : ''}`
+                : `נמצא ב"מידע כללי" — ב‑Note עם תוכן תואם`;
+            return `${idx + 1}. ${where}.\nתמצית: ${clean || 'אין תמצית זמינה.'}`;
+          })
+          .join('\n\n')
+      : 'לא מצאתי מידע רלוונטי במערכת.';
+
+  res.json({ answer });
 });
 
 // Tasks
