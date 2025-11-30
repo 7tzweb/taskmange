@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?
+  tasks     Task[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Template {
+  id               String   @id @default(uuid())
+  name             String
+  steps            Json     @default("[]")
+  defaultStartDate String?
+  defaultEndDate   String?
+  tasks            Task[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Task {
+  id         String    @id @default(uuid())
+  title      String
+  content    String?
+  startDate  String?
+  endDate    String?
+  userId     String?
+  templateId String?
+  status     String?
+  progress   Float?
+  flag       Boolean   @default(false)
+  steps      Json      @default("[]")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user     User?     @relation(fields: [userId], references: [id])
+  template Template? @relation(fields: [templateId], references: [id])
+
+  @@index([title])
+  @@index([userId])
+  @@index([status])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  guides    Guide[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Guide {
+  id         String    @id @default(uuid())
+  title      String
+  content    String?
+  categoryId String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([title])
+  @@index([categoryId])
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  title     String?
+  content   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([title])
+}

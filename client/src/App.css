@@ -60,7 +60,8 @@
 }
 
 .mega-item a,
-.mega-item button {
+.mega-item button,
+.mega-trigger {
   background: transparent;
   border: none;
   font: inherit;
@@ -73,12 +74,29 @@
 }
 
 .mega-item a:hover,
-.mega-item button:hover {
+.mega-item button:hover,
+.mega-trigger:hover {
   background: rgba(0, 0, 0, 0.04);
 }
 
 .dropdown {
   position: relative;
+}
+
+.mega-trigger-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.caret-btn {
+  padding: 6px 6px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.caret-btn:hover {
+  border-color: var(--border);
 }
 
 .dropdown-menu {

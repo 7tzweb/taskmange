@@ -1,4 +1,4 @@
-import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import config from 'devextreme/core/config';
 import HomePage from './pages/HomePage.jsx';
@@ -16,20 +16,19 @@ import './App.css';
 
 function AppShell() {
   const [dropdownState, setDropdownState] = useState({ tasks: false, guides: false, info: false });
+  const navigate = useNavigate();
   const closeTimer = useRef({});
 
   useEffect(() => {
     config({ rtlEnabled: true });
   }, []);
 
-  const openDropdown = (key) => {
-    if (closeTimer.current[key]) clearTimeout(closeTimer.current[key]);
-    setDropdownState((s) => ({ ...s, [key]: true }));
-  };
-
-  const scheduleCloseDropdown = (key) => {
-    if (closeTimer.current[key]) clearTimeout(closeTimer.current[key]);
-    closeTimer.current[key] = setTimeout(() => setDropdownState((s) => ({ ...s, [key]: false })), 200);
+  const toggleDropdown = (key) => {
+    setDropdownState((s) => {
+      const next = { tasks: false, guides: false, info: false };
+      next[key] = !s[key];
+      return next;
+    });
   };
 
   const location = useLocation();
@@ -49,48 +48,72 @@ function AppShell() {
       <nav className="mega-nav">
         <div className="logo">TaskManage</div>
         <ul className="mega-list">
-          <li
-            className={`mega-item dropdown ${dropdownState.tasks ? 'open' : ''}`}
-            onMouseEnter={() => openDropdown('tasks')}
-            onMouseLeave={() => scheduleCloseDropdown('tasks')}
-          >
-            <button type="button" onClick={() => setDropdownState((s) => ({ ...s, tasks: !s.tasks }))}>
-              משימות ▾
-            </button>
-            <div className="dropdown-menu">
-              <NavLink to="/summary">סיכום משימות</NavLink>
-              <NavLink to="/completed">משימות שהושלמו</NavLink>
-              <NavLink to="/tasks">יצירת משימה</NavLink>
-              <NavLink to="/users">משתמשים</NavLink>
-              <NavLink to="/templates">טמפלייטים</NavLink>
+          <li className={`mega-item dropdown ${dropdownState.tasks ? 'open' : ''}`}>
+            <div className="mega-trigger-row">
+              <NavLink to="/summary" className="mega-trigger" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>
+                משימות
+              </NavLink>
+              <button
+                type="button"
+                className="caret-btn"
+                aria-label="פתח משימות"
+                onClick={() => toggleDropdown('tasks')}
+              >
+                ▾
+              </button>
             </div>
+            {dropdownState.tasks && (
+              <div className="dropdown-menu">
+                <NavLink to="/summary" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>סיכום משימות</NavLink>
+                <NavLink to="/completed" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>משימות שהושלמו</NavLink>
+                <NavLink to="/tasks" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>יצירת משימה</NavLink>
+                <NavLink to="/users" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>משתמשים</NavLink>
+                <NavLink to="/templates" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>טמפלייטים</NavLink>
+              </div>
+            )}
           </li>
-          <li
-            className={`mega-item dropdown ${dropdownState.guides ? 'open' : ''}`}
-            onMouseEnter={() => openDropdown('guides')}
-            onMouseLeave={() => scheduleCloseDropdown('guides')}
-          >
-            <button type="button" onClick={() => setDropdownState((s) => ({ ...s, guides: !s.guides }))}>
-              מדריכים ▾
-            </button>
-            <div className="dropdown-menu">
-              <NavLink to="/guides">כל המדריכים</NavLink>
-              <NavLink to="/guides/new">יצירת מדריך</NavLink>
-              <NavLink to="/categories">יצירת קטגוריה</NavLink>
+          <li className={`mega-item dropdown ${dropdownState.guides ? 'open' : ''}`}>
+            <div className="mega-trigger-row">
+              <NavLink to="/guides" className="mega-trigger" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>
+                מדריכים
+              </NavLink>
+              <button
+                type="button"
+                className="caret-btn"
+                aria-label="פתח מדריכים"
+                onClick={() => toggleDropdown('guides')}
+              >
+                ▾
+              </button>
             </div>
+            {dropdownState.guides && (
+              <div className="dropdown-menu">
+                <NavLink to="/guides" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>כל המדריכים</NavLink>
+                <NavLink to="/guides/new" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>יצירת מדריך</NavLink>
+                <NavLink to="/categories" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>יצירת קטגוריה</NavLink>
+              </div>
+            )}
           </li>
-          <li
-            className={`mega-item dropdown ${dropdownState.info ? 'open' : ''}`}
-            onMouseEnter={() => openDropdown('info')}
-            onMouseLeave={() => scheduleCloseDropdown('info')}
-          >
-            <button type="button" onClick={() => setDropdownState((s) => ({ ...s, info: !s.info }))}>
-              מידע ▾
-            </button>
-            <div className="dropdown-menu">
-              <NavLink to="/info">מידע כללי</NavLink>
-              <NavLink to="/info?tab=bot">הבוט</NavLink>
+          <li className={`mega-item dropdown ${dropdownState.info ? 'open' : ''}`}>
+            <div className="mega-trigger-row">
+              <NavLink to="/info" className="mega-trigger" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>
+                מידע
+              </NavLink>
+              <button
+                type="button"
+                className="caret-btn"
+                aria-label="פתח מידע"
+                onClick={() => toggleDropdown('info')}
+              >
+                ▾
+              </button>
             </div>
+            {dropdownState.info && (
+              <div className="dropdown-menu">
+                <NavLink to="/info" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>מידע כללי</NavLink>
+                <NavLink to="/info?tab=bot" onClick={() => setDropdownState({ tasks: false, guides: false, info: false })}>הבוט</NavLink>
+              </div>
+            )}
           </li>
           <li className="mega-item">
             <NavLink to="/services">שירותים</NavLink>

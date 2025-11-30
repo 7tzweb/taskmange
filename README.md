@@ -22,7 +22,39 @@ cd taskmange
 
 ---
 
-## 🔧 3. התקנת כל התלויות (שרת + לקוח)
+## 🐳 3. הרצה מלאה עם Docker (מומלץ)
+
+1) ודא ש‑Docker מותקן ורץ.  
+2) ערוך את קובץ `.env` (ברוט) לפי הצורך. ברירת המחדל מכוונת ל‑PostgreSQL/Redis בקומפוז.
+
+הרצה:
+```sh
+docker-compose up --build -d
+```
+
+לאחר שהשירותים עלו, הרץ מיגרציות וייבוא נתונים (אופציונלי):
+```sh
+# החלת סכימה על PostgreSQL
+docker-compose run --rm node_api npx prisma migrate deploy
+
+# ייבוא נתוני db.json ל‑PostgreSQL
+docker-compose run --rm node_api npm run import:data
+```
+
+נקודות גישה:
+- API: http://localhost:4000  
+- Client (Vite): http://localhost:5173  
+- PgAdmin: http://localhost:8080 (admin@admin.com / admin)  
+- Redis: localhost:6379
+
+עצירה:
+```sh
+docker-compose down
+```
+
+---
+
+## 🔧 4. התקנה מקומית (ללא Docker) – שרת + לקוח
 
 הרצה אחת שמתקינה את כל מה שצריך:
 
@@ -34,7 +66,7 @@ npm install --prefix client
 
 ---
 
-## 🚀 4. הרצה משולבת (Client + Server ביחד)
+## 🚀 5. הרצה משולבת (Client + Server ביחד)
 
 הפרויקט מוגדר עם הסקריפט הבא:
 
@@ -51,7 +83,7 @@ npm run dev
 ### מה זה עושה?
 
 - מפעיל את השרת על:  
-  **http://localhost:3000**
+  **http://localhost:4000**
 
 - מפעיל את הלקוח (Vite) על:  
   **http://localhost:5173**
@@ -83,19 +115,15 @@ npm run build
 
 ```
 taskmange/
- ├── client/           # Frontend (Vite)
- │   ├── src/
- │   ├── public/
- │   ├── package.json
- │   └── vite.config.js
- │
- ├── server/           # Backend (Node.js + Express)
- │   ├── index.js
- │   ├── db.json
- │   ├── nodemon.json
- │   └── package.json
- │
- ├── package.json      # הפעלה משולבת
+ ├── client/                 # Frontend (Vite)
+ ├── server/                 # Backend (Express + Prisma)
+ │   ├── prisma/             # סכימת Prisma + מיגרציות
+ │   ├── generated/prisma    # Prisma Client
+ │   ├── import-data.js      # ייבוא db.json ל‑Postgres
+ │   └── db.json             # נתוני מקור לייבוא
+ ├── docker/                 # Dockerfiles לשרת/לקוח
+ ├── docker-compose.yml      # orkestration: api + client + postgres + redis + pgadmin
+ ├── .env                    # משתני סביבה (API/DB/Redis)
  └── README.md
 ```
 

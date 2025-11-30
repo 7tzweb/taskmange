@@ -20,17 +20,12 @@ function InfoPage() {
 
   useEffect(() => {
     const urlTab = searchParams.get('tab');
-    if (urlTab === 'bot') setTab('bot');
+    if (urlTab === 'bot') {
+      setTab('bot');
+    } else {
+      setTab('general');
+    }
   }, [searchParams]);
-
-  useEffect(() => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (tab === 'bot') next.set('tab', 'bot');
-      else next.delete('tab');
-      return next;
-    });
-  }, [tab, setSearchParams]);
 
   useEffect(() => {
     loadNotes();
@@ -94,6 +89,9 @@ function InfoPage() {
   const switchTab = (nextTab) => {
     setTab(nextTab);
     setDropdownOpen(false);
+    const params = new URLSearchParams();
+    if (nextTab === 'bot') params.set('tab', 'bot');
+    setSearchParams(params, { replace: true });
   };
 
   return (
@@ -109,25 +107,20 @@ function InfoPage() {
           </div>
         </div>
         <div className="actions inline-actions">
-          <div
-            className={`mini-dropdown ${dropdownOpen ? 'open' : ''}`}
-            onMouseEnter={() => setDropdownOpen(true)}
-            onMouseLeave={() => setDropdownOpen(false)}
+          <button
+            type="button"
+            className={tab === 'general' ? '' : 'ghost'}
+            onClick={() => switchTab('general')}
           >
-            <button type="button" onClick={() => setDropdownOpen((v) => !v)}>
-              {currentTabLabel} ▾
-            </button>
-            {dropdownOpen && (
-              <div className="dropdown-menu">
-                <button type="button" onClick={() => switchTab('general')}>
-                  מידע כללי
-                </button>
-                <button type="button" onClick={() => switchTab('bot')}>
-                  הבוט
-                </button>
-              </div>
-            )}
-          </div>
+            מידע כללי
+          </button>
+          <button
+            type="button"
+            className={tab === 'bot' ? '' : 'ghost'}
+            onClick={() => switchTab('bot')}
+          >
+            הבוט
+          </button>
         </div>
       </section>
 
