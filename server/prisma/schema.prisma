@@ -89,3 +89,93 @@ model Note {
 
   @@index([title])
 }
+
+model Favorite {
+  id        String   @id @default(uuid())
+  title     String
+  content   String?
+  link      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([title])
+}
+
+model Tool {
+  id        String   @id @default(uuid())
+  name      String
+  summary   String?
+  kind      String
+  target    String
+  fileName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model DataTable {
+  id        String   @id @default(uuid())
+  name      String
+  columns   Json     @default("[]")
+  rows      Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model ServiceRequest {
+  id        String   @id @default(uuid())
+  name      String
+  method    String
+  url       String
+  folder    String?
+  params    Json     @default("[]")
+  headers   Json     @default("[]")
+  body      String?
+  authType  String?
+  bearer    String?
+  responses Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([folder])
+}
+
+model Embedding {
+  id         Int       @id @default(autoincrement())
+  entityType String
+  entityId   String
+  content    String
+  embedding  Unsupported("vector(1536)")
+  createdAt  DateTime  @default(now())
+
+  @@map("embeddings")
+  @@index([entityType])
+  @@index([entityId])
+}
+
+model ChatSession {
+  id        String         @id @default(uuid())
+  title     String
+  userId    String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  sessionId String
+  role      String
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+}

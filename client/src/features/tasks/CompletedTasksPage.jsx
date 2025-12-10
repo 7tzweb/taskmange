@@ -12,7 +12,7 @@ import DataGrid, {
   Toolbar,
   Item,
 } from 'devextreme-react/data-grid';
-import { fetchTasks, fetchUsers } from '../api.js';
+import { fetchTasks, fetchUsers } from '../../api.js';
 
 const StatusPill = ({ status }) => (
   <span className={`pill pill-${status}`}>

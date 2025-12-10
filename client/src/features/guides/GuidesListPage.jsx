@@ -12,7 +12,7 @@ import DataGrid, {
   Toolbar,
   Item,
 } from 'devextreme-react/data-grid';
-import { fetchGuides, fetchCategories } from '../api.js';
+import { fetchGuides, fetchCategories } from '../../api.js';
 import { useNavigate } from 'react-router-dom';
 
 function GuidesListPage() {

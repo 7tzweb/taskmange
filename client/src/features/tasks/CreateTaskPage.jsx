@@ -12,20 +12,36 @@ import DataGrid, {
   Toolbar,
   Item,
 } from 'devextreme-react/data-grid';
-import { fetchUsers, fetchTemplates, fetchTasks, createTask, updateTask, deleteTask, cloneTask } from '../api.js';
+import { fetchUsers, fetchTemplates, fetchTasks, createTask, updateTask, deleteTask, cloneTask } from '../../api.js';
 
 const uid = () =>
   globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : Math.random().toString(36).slice(2);
 
+const DEFAULT_STEPS = [
+  { title: 'התחלה', link: '', completed: false },
+  { title: 'סיום', link: '', completed: false },
+];
+
+const ensureDefaultSteps = (steps = []) => {
+  const hasStart = steps.some((s) => (s.title || '').trim().toLowerCase() === 'התחלה');
+  const hasEnd = steps.some((s) => (s.title || '').trim().toLowerCase() === 'סיום');
+  const next = [...steps];
+  if (!hasStart) next.unshift({ id: uid(), title: 'התחלה', link: '', completed: false });
+  if (!hasEnd) next.push({ id: uid(), title: 'סיום', link: '', completed: false });
+  return next;
+};
+
+const today = () => new Date().toISOString().slice(0, 10);
+
 const createEmptyTask = () => ({
   title: '',
-  startDate: '',
+  startDate: today(),
   endDate: '',
   content: '',
   userId: '',
   templateId: '',
   flag: false,
-  steps: [],
+  steps: ensureDefaultSteps([]),
 });
 
 const StatusPill = ({ status }) => (
@@ -161,19 +177,23 @@ const addStep = () => {
       setTaskForm((prev) => ({ ...prev, templateId: '', steps: [] }));
       return;
     }
+    const tplSteps = tpl.steps.map((s) => ({ ...s, link: s.link || '', completed: false }));
     setTaskForm((prev) => ({
       ...prev,
       templateId,
       startDate: prev.startDate || tpl.defaultStartDate,
       endDate: prev.endDate || tpl.defaultEndDate,
-      steps: tpl.steps.map((s) => ({ ...s, link: s.link || '', completed: false })),
+      steps: ensureDefaultSteps(tplSteps),
     }));
   };
 
   const saveTask = async (e) => {
     e.preventDefault();
     if (!taskForm.title) return;
-    const payload = { ...taskForm };
+    const payload = {
+      ...taskForm,
+      steps: ensureDefaultSteps(taskForm.steps),
+    };
     if (editingTask) {
       await updateTask(editingTask.id, payload);
     } else {
@@ -243,7 +263,7 @@ const addStep = () => {
         </div>
       </section>
 
-      <section className="grid two">
+      <section className="stack">
         <form className="card" onSubmit={saveTask}>
           <div className="card-head">
             <div>

@@ -1,140 +1,85 @@
 # TaskMange
 
-מדריך התקנה והרצה של הפרויקט (Client + Server)
+שלושה חלקים קצרים: הרצה, התקנה, והעלאה לייצור (לינוקס).
 
 ---
 
-## 📦 1. הורדה / שכפול הפרויקט
-
-```sh
-git clone https://github.com/7tzweb/taskmange.git
-```
-
-או הורד ZIP ופתח אותו.
-
----
-
-## 📁 2. מעבר לתיקיית הפרויקט
-
+## 1) איך להריץ (פיתוח)
+דרישות: Node.js 20+, npm.
 ```sh
 cd taskmange
+npm install         # שורש (concurrently)
+npm install --prefix server
+npm install --prefix client
+
+npm run dev         # מפעיל שרת + לקוח יחד
 ```
-
----
-
-## 🐳 3. הרצה מלאה עם Docker (מומלץ)
-
-1) ודא ש‑Docker מותקן ורץ.  
-2) ערוך את קובץ `.env` (ברוט) לפי הצורך. ברירת המחדל מכוונת ל‑PostgreSQL/Redis בקומפוז.
-
-הרצה:
-```sh
-docker-compose up --build -d
-```
-
-לאחר שהשירותים עלו, הרץ מיגרציות וייבוא נתונים (אופציונלי):
-```sh
-# החלת סכימה על PostgreSQL
-docker-compose run --rm node_api npx prisma migrate deploy
-
-# ייבוא נתוני db.json ל‑PostgreSQL
-docker-compose run --rm node_api npm run import:data
-```
-
-נקודות גישה:
 - API: http://localhost:4000  
-- Client (Vite): http://localhost:5173  
-- PgAdmin: http://localhost:8080 (admin@admin.com / admin)  
-- Redis: localhost:6379
+- Vite: http://localhost:5173  
+עצירה: `Ctrl+C`.
 
-עצירה:
-```sh
-docker-compose down
-```
+אם צריך בנפרד:
+- שרת בלבד: `npm run dev:server`
+- לקוח בלבד: `npm run dev:client`
 
 ---
 
-## 🔧 4. התקנה מקומית (ללא Docker) – שרת + לקוח
-
-הרצה אחת שמתקינה את כל מה שצריך:
-
+## 2) איך להתקין (ללא Docker)
 ```sh
+cd taskmange
 npm install
 npm install --prefix server
 npm install --prefix client
+# ריצה מקומית: npm run dev
+# בניית פרונט: npm run build --prefix client
+```
+בדוק קובץ `.env` בשרת אם צריך לשנות חיבורי DB/Redis/Ollama.
+
+---
+
+## 3) איך להעלות לייצור (שרת לינוקס)
+דרך מומלצת: Docker Compose.
+
+1. התקן Docker + Docker Compose.
+2. העבר את קבצי הפרויקט לשרת (git clone או העתקה).
+3. הגדר `.env` ברוט (URLים של DB/Redis/Ollama). ברירת מחדל מכוונת לשירותי ה‑compose.
+4. הרם את הסטאק:
+   ```sh
+   docker compose up --build -d
+   ```
+5. החלת סכימה על PostgreSQL:
+   ```sh
+   docker compose run --rm node_api npx prisma migrate deploy
+   ```
+6. (אופציונלי) ייבוא נתוני הדגמה מ‑db.json:
+   ```sh
+   docker compose run --rm node_api npm run import:data
+   ```
+
+נקודות גישה בייצור (ברירת מחדל):
+- API: http://<server-ip>:4000  
+- Client (Vite dev server, אפשר לעטוף ב‑NGINX ל‑443): http://<server-ip>:5173  
+- PgAdmin: http://<server-ip>:8080 (admin@admin.com / admin)
+
+עצירת הסטאק:
+```sh
+docker compose down
 ```
 
 ---
 
-## 🚀 5. הרצה משולבת (Client + Server ביחד)
-
-הפרויקט מוגדר עם הסקריפט הבא:
-
-```json
-"dev": "concurrently -k -n server,client -c magenta,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\""
-```
-
-להריץ הכול בפקודה אחת:
-
-```sh
-npm run dev
-```
-
-### מה זה עושה?
-
-- מפעיל את השרת על:  
-  **http://localhost:4000**
-
-- מפעיל את הלקוח (Vite) על:  
-  **http://localhost:5173**
-
-שניהם ירוצו יחד, עם לוגים בצבעים שונים.
-
----
-
-## 🛠 פקודות שימושיות
-
-### הרצת שרת בלבד
-```sh
-npm run dev:server
-```
-
-### הרצת לקוח בלבד
-```sh
-npm run dev:client
-```
-
-### בניית הפרונטאנד לפרודקשן
-```sh
-npm run build
-```
-
----
-
-## 🧱 מבנה הפרויקט
-
+## מבנה הפרויקט (עיקרי)
 ```
 taskmange/
- ├── client/                 # Frontend (Vite)
- ├── server/                 # Backend (Express + Prisma)
- │   ├── prisma/             # סכימת Prisma + מיגרציות
- │   ├── generated/prisma    # Prisma Client
- │   ├── import-data.js      # ייבוא db.json ל‑Postgres
- │   └── db.json             # נתוני מקור לייבוא
- ├── docker/                 # Dockerfiles לשרת/לקוח
- ├── docker-compose.yml      # orkestration: api + client + postgres + redis + pgadmin
- ├── .env                    # משתני סביבה (API/DB/Redis)
- └── README.md
+ ├─ client/                  # פרונט (Vite + React)
+ │   ├─ src/features/...     # מסכים לפי תחום (tasks, guides, tools וכו')
+ │   ├─ src/components/      # רכיבים משותפים
+ │   └─ src/api.js           # קריאות API
+ ├─ server/                  # בקאנד (Express + Prisma)
+ │   ├─ index.ts             # נקודת כניסה
+ │   ├─ prisma/              # סכימת Prisma
+ │   └─ import-data.js       # ייבוא db.json
+ ├─ docker/                  # Dockerfiles
+ ├─ docker-compose.yml       # orkestration (api + client + postgres + redis + pgadmin)
+ └─ README.md
 ```
-
----
-
-## ✔ סיימת!
-
-עכשיו כל מה שצריך זה להריץ:
-
-```sh
-npm run dev
-```
-
-והפרונטאנד והבקאנד יפעלו ביחד.

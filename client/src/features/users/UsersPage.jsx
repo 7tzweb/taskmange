@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchUsers, createUser, updateUser, deleteUser } from '../api.js';
+import { fetchUsers, createUser, updateUser, deleteUser } from '../../api.js';
 
 const emptyUser = { id: '', name: '', email: '' };
 

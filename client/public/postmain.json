@@ -1,0 +1,78 @@
+{
+  "info": {
+    "name": "TaskManage Sample",
+    "_postman_id": "8c273c3d-7f09-4024-bd16-9a18c49c22b9",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "replace-with-token",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "List APIs",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "https://api.apis.guru/v2/list.json",
+          "protocol": "https",
+          "host": ["api", "apis", "guru"],
+          "path": ["v2", "list.json"]
+        }
+      }
+    },
+    {
+      "name": "Mock Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Example\",\n  \"role\": \"Admin\"\n}"
+        },
+        "url": {
+          "raw": "https://postman-echo.com/post",
+          "protocol": "https",
+          "host": ["postman-echo", "com"],
+          "path": ["post"]
+        }
+      }
+    },
+    {
+      "name": "Users Search",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://dummyjson.com/users/search?q=Leanne",
+          "protocol": "https",
+          "host": ["dummyjson", "com"],
+          "path": ["users", "search"],
+          "query": [
+            {
+              "key": "q",
+              "value": "Leanne"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

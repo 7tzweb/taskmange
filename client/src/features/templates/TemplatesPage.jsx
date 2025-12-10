@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createTemplate, deleteTemplate, fetchTemplates, updateTemplate } from '../api.js';
+import { createTemplate, deleteTemplate, fetchTemplates, updateTemplate } from '../../api.js';
 
 const uid = () =>
   globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : Math.random().toString(36).slice(2);

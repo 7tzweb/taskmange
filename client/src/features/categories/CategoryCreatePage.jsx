@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchCategories, createCategory, deleteCategory } from '../api.js';
+import { fetchCategories, createCategory, deleteCategory } from '../../api.js';
 
 function CategoryCreatePage() {
   const [categories, setCategories] = useState([]);

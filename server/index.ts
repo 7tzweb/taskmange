@@ -1,18 +1,40 @@
+// @ts-nocheck
 import 'dotenv/config';
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
 import cors from 'cors';
 import dayjs from 'dayjs';
 import { nanoid } from 'nanoid';
 import { createClient } from 'redis';
+import multer from 'multer';
+import mammoth from 'mammoth';
 import prisma from './prisma.js';
+import { fileURLToPath } from 'url';
+import chatRouter from './src/routes/chat.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 app.use(cors());
 app.use(express.json());
 
 const stripHtml = (html = '') => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = path.resolve(__dirname, '..');
+const TOOLS_DIR = path.join(ROOT_DIR, 'ntools');
+
+if (!fs.existsSync(TOOLS_DIR)) {
+  fs.mkdirSync(TOOLS_DIR, { recursive: true });
+}
+
+app.use('/ntools', express.static(TOOLS_DIR));
+app.use('/api', chatRouter);
 
 const computeProgress = (steps = []) => {
   if (!steps.length) return 0;
@@ -202,6 +224,92 @@ app.delete('/api/templates/:id', async (req, res) => {
   res.sendStatus(204);
 });
 
+// Services (Postman-like)
+const normalizeRequestPayload = (r = {}) => ({
+  id: r.id || nanoid(),
+  name: r.name || 'Unnamed',
+  method: r.method || 'GET',
+  url: r.url || '',
+  folder: r.folder || '',
+  params: Array.isArray(r.params) ? r.params : [],
+  headers: Array.isArray(r.headers) ? r.headers : [],
+  body: r.body || '',
+  authType: r.authType || '',
+  bearer: r.bearer || '',
+  responses: Array.isArray(r.responses) ? r.responses : [],
+});
+
+app.get('/api/services', async (_req, res) => {
+  const requests = await prisma.serviceRequest.findMany({ orderBy: { createdAt: 'desc' } });
+  res.json(requests);
+});
+
+app.post('/api/services/import', async (req, res) => {
+  const incoming = Array.isArray(req.body.requests) ? req.body.requests : [];
+  if (!incoming.length) return res.status(400).json({ error: 'No requests to import' });
+
+  const saved = [];
+  for (const raw of incoming) {
+    const data = normalizeRequestPayload(raw);
+    const created = await prisma.serviceRequest.create({ data });
+    saved.push(created);
+  }
+  res.status(201).json(saved);
+});
+
+app.post('/api/services', async (req, res) => {
+  const data = normalizeRequestPayload(req.body);
+  if (!data.url) return res.status(400).json({ error: 'URL is required' });
+  const created = await prisma.serviceRequest.create({ data });
+  res.status(201).json(created);
+});
+
+app.put('/api/services/:id', async (req, res) => {
+  const { id } = req.params;
+  const data = normalizeRequestPayload({ ...req.body, id });
+  try {
+    const updated = await prisma.serviceRequest.update({ where: { id }, data });
+    res.json(updated);
+  } catch {
+    res.status(404).json({ error: 'Service not found' });
+  }
+});
+
+app.delete('/api/services/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.serviceRequest.delete({ where: { id } });
+  } catch {
+    // ignore missing
+  }
+  res.sendStatus(204);
+});
+
+app.post('/api/services/:id/duplicate', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const original = await prisma.serviceRequest.findUnique({ where: { id } });
+    if (!original) return res.status(404).json({ error: 'Service not found' });
+    const copy = await prisma.serviceRequest.create({
+      data: {
+        name: `${original.name} Copy`,
+        method: original.method,
+        url: original.url,
+        folder: original.folder,
+        params: original.params,
+        headers: original.headers,
+        body: original.body,
+        authType: original.authType,
+        bearer: original.bearer,
+        responses: original.responses,
+      },
+    });
+    res.status(201).json(copy);
+  } catch {
+    res.status(500).json({ error: 'Could not duplicate service' });
+  }
+});
+
 // Categories (cached)
 
 app.get('/api/categories', async (req, res) => {
@@ -314,6 +422,47 @@ app.post('/api/guides', async (req, res) => {
   res.status(201).json(guide);
 });
 
+app.post('/api/guides/import-word', upload.single('file'), async (req, res) => {
+  const { title = '', categoryId = null } = req.body || {};
+  const file = req.file;
+
+  if (!file) return res.status(400).json({ error: 'Word file is required' });
+  const isDocx = /\.docx$/i.test(file.originalname || '');
+  if (!isDocx) return res.status(400).json({ error: 'Only .docx files are supported' });
+
+  const normalizedCategory =
+    categoryId && typeof categoryId === 'string' && categoryId.trim() !== '' ? categoryId.trim() : null;
+  if (normalizedCategory) {
+    const exists = await prisma.category.findUnique({ where: { id: normalizedCategory } });
+    if (!exists) return res.status(400).json({ error: 'Category does not exist' });
+  }
+
+  let htmlContent = '';
+  try {
+    const result = await mammoth.convertToHtml({ buffer: file.buffer });
+    htmlContent = (result.value || '').trim();
+  } catch (err) {
+    console.error('Failed to parse docx', err);
+    return res.status(400).json({ error: 'Failed to read Word file' });
+  }
+
+  if (!htmlContent) return res.status(400).json({ error: 'The Word file is empty' });
+
+  const fallbackTitle = (file.originalname || 'מדריך חדש').replace(/\.docx$/i, '').trim() || 'מדריך חדש';
+  const finalTitle = (title && title.trim()) || fallbackTitle;
+
+  const guide = await prisma.guide.create({
+    data: {
+      title: finalTitle,
+      categoryId: normalizedCategory,
+      content: htmlContent,
+    },
+  });
+
+  await cacheDel(GUIDE_CACHE_KEY);
+  res.status(201).json(guide);
+});
+
 app.put('/api/guides/:id', async (req, res) => {
   const { id } = req.params;
   const { title, categoryId, content } = req.body;
@@ -398,13 +547,177 @@ app.delete('/api/notes/:id', async (req, res) => {
   res.sendStatus(204);
 });
 
+// Data tables (grid)
+const normalizeGrid = (columns = [], rows = []) => {
+  const safeCols = Array.isArray(columns) ? columns : [];
+  const width = safeCols.length || 0;
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const normalizedRows = safeRows.map((r) => {
+    const base = Array.isArray(r) ? r : [];
+    if (base.length < width) return [...base, ...Array(width - base.length).fill('')];
+    if (base.length > width) return base.slice(0, width);
+    return base;
+  });
+  return { columns: safeCols, rows: normalizedRows };
+};
+
+const tableMatchesSearch = (table, term) => {
+  if (!term) return true;
+  const lower = term.toLowerCase();
+  const columns = Array.isArray(table.columns) ? table.columns : [];
+  const rows = Array.isArray(table.rows) ? table.rows : [];
+  const haystack = [
+    table.name || '',
+    columns.join(' '),
+    ...rows.map((row) => (Array.isArray(row) ? row.join(' ') : JSON.stringify(row || ''))),
+  ]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(lower);
+};
+
+app.get('/api/tables', async (req, res) => {
+  const { search = '' } = req.query;
+  const tables = await prisma.dataTable.findMany({ orderBy: { updatedAt: 'desc' } });
+  if (search) {
+    const term = search.toString();
+    return res.json(tables.filter((t) => tableMatchesSearch(t, term)));
+  }
+  res.json(tables);
+});
+
+app.get('/api/tables/:id', async (req, res) => {
+  const { id } = req.params;
+  const table = await prisma.dataTable.findUnique({ where: { id } });
+  if (!table) return res.status(404).json({ error: 'Table not found' });
+  res.json(table);
+});
+
+app.post('/api/tables', async (req, res) => {
+  const { name, columns = [], rows = [] } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+  const { columns: normalizedCols, rows: normalizedRows } = normalizeGrid(columns, rows);
+  const created = await prisma.dataTable.create({
+    data: { name, columns: normalizedCols, rows: normalizedRows },
+  });
+  res.status(201).json(created);
+});
+
+app.put('/api/tables/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, columns = [], rows = [] } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+  try {
+    const { columns: normalizedCols, rows: normalizedRows } = normalizeGrid(columns, rows);
+    const updated = await prisma.dataTable.update({
+      where: { id },
+      data: { name, columns: normalizedCols, rows: normalizedRows },
+    });
+    res.json(updated);
+  } catch {
+    res.status(404).json({ error: 'Table not found' });
+  }
+});
+
+app.delete('/api/tables/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.dataTable.delete({ where: { id } });
+  } catch {
+    // ignore
+  }
+  res.sendStatus(204);
+});
+
+// Favorites
+app.get('/api/favorites', async (req, res) => {
+  const { search = '' } = req.query;
+  const where = search
+    ? {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { content: { contains: search, mode: 'insensitive' } },
+        ],
+      }
+    : undefined;
+  const favorites = await prisma.favorite.findMany({ where, orderBy: { updatedAt: 'desc' } });
+  res.json(favorites);
+});
+
+app.post('/api/favorites', async (req, res) => {
+  const { title, content = '', link = '' } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title is required' });
+  const fav = await prisma.favorite.create({
+    data: { title, content, link },
+  });
+  res.status(201).json(fav);
+});
+
+app.put('/api/favorites/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, content, link } = req.body;
+  try {
+    const fav = await prisma.favorite.update({
+      where: { id },
+      data: { title, content, link },
+    });
+    res.json(fav);
+  } catch {
+    res.status(404).json({ error: 'Favorite not found' });
+  }
+});
+
+app.delete('/api/favorites/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.favorite.delete({ where: { id } });
+  } catch {
+    // ignore
+  }
+  res.sendStatus(204);
+});
+
+// Import favorites from Chrome/HTML bookmarks (Netscape format)
+app.post('/api/favorites/import', async (req, res) => {
+  const { html = '' } = req.body;
+  if (!html.trim()) return res.status(400).json({ error: 'html is required' });
+
+  // crude anchor extraction: <A ... HREF="url">title</A>
+  const anchorRegex = /<a\s+[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/gi;
+  const anchors = [];
+  let match;
+  while ((match = anchorRegex.exec(html)) !== null) {
+    const link = match[1]?.trim();
+    const title = match[2]?.replace(/<[^>]+>/g, '').trim();
+    if (link && title) anchors.push({ link, title });
+  }
+
+  if (!anchors.length) return res.status(400).json({ error: 'No links found' });
+
+  const existing = await prisma.favorite.findMany({
+    where: { link: { in: anchors.map((a) => a.link) } },
+    select: { link: true },
+  });
+  const existingLinks = new Set(existing.map((e) => e.link));
+  const toCreate = anchors.filter((a) => !existingLinks.has(a.link));
+
+  if (!toCreate.length) return res.json({ created: 0, skipped: anchors.length });
+
+  await prisma.favorite.createMany({
+    data: toCreate.map((a) => ({ title: a.title, link: a.link, content: '' })),
+  });
+
+  res.json({ created: toCreate.length, skipped: anchors.length - toCreate.length });
+});
+
 // Bot (search in guides + notes)
 app.post('/api/bot', async (req, res) => {
   const { question = '' } = req.body;
   const text = question.toLowerCase();
-  const [notes, guides] = await Promise.all([
+  const [notes, guides, favorites] = await Promise.all([
     prisma.note.findMany({ orderBy: { updatedAt: 'desc' } }),
     prisma.guide.findMany({ include: { category: true }, orderBy: { updatedAt: 'desc' } }),
+    prisma.favorite.findMany({ orderBy: { updatedAt: 'desc' } }),
   ]);
 
   const corpus = [
@@ -420,6 +733,13 @@ app.post('/api/bot', async (req, res) => {
       content: g.content || '',
       categoryName: g.category?.name || '',
       source: 'guide',
+    })),
+    ...favorites.map((f) => ({
+      type: 'favorite',
+      title: f.title || 'Favorite',
+      content: f.content || '',
+      link: f.link || '',
+      source: 'favorite',
     })),
   ];
 
@@ -451,6 +771,131 @@ app.post('/api/bot', async (req, res) => {
       : 'לא מצאתי מידע רלוונטי במערכת.';
 
   res.json({ answer });
+});
+
+// Tools (links or HTML files)
+const writeToolFile = async (fileName, content) => {
+  const fullPath = path.join(TOOLS_DIR, fileName);
+  await fs.promises.writeFile(fullPath, content || '', 'utf-8');
+  return `/ntools/${fileName}`;
+};
+
+const deleteToolFile = async (fileName) => {
+  if (!fileName) return;
+  const fullPath = path.join(TOOLS_DIR, fileName);
+  try {
+    await fs.promises.unlink(fullPath);
+  } catch {
+    /* ignore */
+  }
+};
+
+const shapeTool = (tool) => ({
+  ...tool,
+  url: tool.target,
+});
+
+app.get('/api/tools', async (req, res) => {
+  const { search = '' } = req.query;
+  let tools = await prisma.tool.findMany({ orderBy: { createdAt: 'desc' } });
+  if (search) {
+    const term = search.toString().toLowerCase();
+    tools = tools.filter(
+      (t) =>
+        t.name.toLowerCase().includes(term) ||
+        (t.summary || '').toLowerCase().includes(term)
+    );
+  }
+  res.json(tools.map(shapeTool));
+});
+
+app.get('/api/tools/:id', async (req, res) => {
+  const { id } = req.params;
+  const tool = await prisma.tool.findUnique({ where: { id } });
+  if (!tool) return res.status(404).json({ error: 'Tool not found' });
+  let htmlContent = '';
+  if (tool.kind === 'html' && tool.fileName) {
+    try {
+      htmlContent = await fs.promises.readFile(path.join(TOOLS_DIR, tool.fileName), 'utf-8');
+    } catch {
+      htmlContent = '';
+    }
+  }
+  res.json({ ...shapeTool(tool), htmlContent });
+});
+
+app.post('/api/tools', async (req, res) => {
+  const { name, summary = '', kind, link = '', html = '' } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+  if (!['link', 'html'].includes(kind)) return res.status(400).json({ error: 'kind must be link or html' });
+
+  try {
+    let target = '';
+    let fileName = null;
+    if (kind === 'link') {
+      if (!link) return res.status(400).json({ error: 'Link is required' });
+      target = link;
+    } else {
+      if (!html) return res.status(400).json({ error: 'HTML content is required' });
+      fileName = `${nanoid()}.html`;
+      target = await writeToolFile(fileName, html);
+    }
+
+    const tool = await prisma.tool.create({
+      data: { name, summary, kind, target, fileName },
+    });
+    res.status(201).json(shapeTool(tool));
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to create tool' });
+  }
+});
+
+app.put('/api/tools/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, summary = '', kind, link = '', html = '' } = req.body;
+  const existing = await prisma.tool.findUnique({ where: { id } });
+  if (!existing) return res.status(404).json({ error: 'Tool not found' });
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+  if (!['link', 'html'].includes(kind)) return res.status(400).json({ error: 'kind must be link or html' });
+
+  try {
+    let target = existing.target;
+    let fileName = existing.fileName;
+
+    if (kind === 'link') {
+      if (!link) return res.status(400).json({ error: 'Link is required' });
+      target = link;
+      if (existing.kind === 'html' && existing.fileName) {
+        await deleteToolFile(existing.fileName);
+        fileName = null;
+      }
+    } else {
+      if (!html) return res.status(400).json({ error: 'HTML content is required' });
+      if (!fileName) fileName = `${nanoid()}.html`;
+      target = await writeToolFile(fileName, html);
+    }
+
+    const tool = await prisma.tool.update({
+      where: { id },
+      data: { name, summary, kind, target, fileName },
+    });
+    res.json(shapeTool(tool));
+  } catch {
+    res.status(500).json({ error: 'Failed to update tool' });
+  }
+});
+
+app.delete('/api/tools/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const tool = await prisma.tool.delete({ where: { id } });
+    if (tool.kind === 'html' && tool.fileName) {
+      await deleteToolFile(tool.fileName);
+    }
+    res.sendStatus(204);
+  } catch {
+    res.status(404).json({ error: 'Tool not found' });
+  }
 });
 
 // Tasks

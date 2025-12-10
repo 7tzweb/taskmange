@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": ".",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "noEmitOnError": false,
+    "strict": false
+  },
+  "include": ["index.ts", "src/**/*", "prisma.config.ts", "*.js"],
+  "exclude": ["node_modules", "dist"]
+}

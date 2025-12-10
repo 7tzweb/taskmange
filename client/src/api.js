@@ -34,6 +34,8 @@ export const fetchGuides = async (params = {}) => (await api.get('/guides', { pa
 export const createGuide = async (payload) => (await api.post('/guides', payload)).data;
 export const updateGuide = async (id, payload) => (await api.put(`/guides/${id}`, payload)).data;
 export const deleteGuide = async (id) => api.delete(`/guides/${id}`);
+export const importGuideFromWord = async (formData) =>
+  (await api.post('/guides/import-word', formData, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
 
 // Notes (Info)
 export const fetchNotes = async (params = {}) => (await api.get('/notes', { params })).data;
@@ -41,5 +43,31 @@ export const createNote = async (payload) => (await api.post('/notes', payload))
 export const updateNote = async (id, payload) => (await api.put(`/notes/${id}`, payload)).data;
 export const deleteNote = async (id) => api.delete(`/notes/${id}`);
 
+// Data tables
+export const fetchTables = async (params = {}) => (await api.get('/tables', { params })).data;
+export const fetchTable = async (id) => (await api.get(`/tables/${id}`)).data;
+export const createTable = async (payload) => (await api.post('/tables', payload)).data;
+export const updateTable = async (id, payload) => (await api.put(`/tables/${id}`, payload)).data;
+export const deleteTable = async (id) => api.delete(`/tables/${id}`);
+
+// Favorites
+export const fetchFavorites = async (params = {}) => (await api.get('/favorites', { params })).data;
+export const createFavorite = async (payload) => (await api.post('/favorites', payload)).data;
+export const updateFavorite = async (id, payload) => (await api.put(`/favorites/${id}`, payload)).data;
+export const deleteFavorite = async (id) => api.delete(`/favorites/${id}`);
+export const importFavorites = async (html) => (await api.post('/favorites/import', { html })).data;
+
+// Tools
+export const fetchTools = async (params = {}) => (await api.get('/tools', { params })).data;
+export const fetchTool = async (id) => (await api.get(`/tools/${id}`)).data;
+export const createTool = async (payload) => (await api.post('/tools', payload)).data;
+export const updateTool = async (id, payload) => (await api.put(`/tools/${id}`, payload)).data;
+export const deleteTool = async (id) => api.delete(`/tools/${id}`);
+
 // Bot
 export const askBot = async (payload) => (await api.post('/bot', payload)).data;
+export const askProBot = async (payload) => (await api.post('/chat', payload)).data;
+export const fetchChatSessions = async () => (await api.get('/chat/sessions')).data;
+export const fetchChatHistory = async (sessionId) => (await api.get(`/chat/${sessionId}/messages`)).data;
+export const deleteChatSession = async (sessionId) => api.delete(`/chat/${sessionId}`);
+export const rebuildEmbeddings = async () => (await api.post('/embeddings/rebuild')).data;

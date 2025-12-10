@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>קידוד טקסט לפי האות הראשונה + בדיקת אימות aragon2id</title>
+  <style>
+    :root {
+      --bg: #0b1020; --panel: #121a33; --ink: #e7ecff; --muted: #94a3b8; --acc: #7c3aed; --ok:#16a34a; --warn:#eab308;
+    }
+    body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#172046 0%,#0b1020 50%), var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";height:100%}
+    .wrap{max-width:960px;margin:auto;padding:32px}
+    .card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+    input[type="text"],input[type="number"]{width:auto;min-width:80px;background:#101a3b;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--ink);padding:6px 10px;margin:4px;font-size:14px;transition:all .2s;display:inline-block}
+    input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(124,58,237,.3);outline:none}
+    button{border:0;background:linear-gradient(135deg,var(--acc),#4f46e5);color:white;padding:8px 14px;border-radius:10px;cursor:pointer;margin:4px;transition:transform .1s}
+    button:hover{transform:scale(1.05)}
+    button.secondary{background:#1d284f}
+    .mono{font-family:monospace;font-size:13px;white-space:pre-wrap}
+    .list{display:grid;gap:10px;margin-top:8px}
+    .item{background:#0e1633;border:1px solid rgba(255,255,255,.08);padding:14px;border-radius:12px}
+    .flex{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .small{font-size:12px;color:#9ca3af}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/argon2-browser/dist/argon2-bundled.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>  קידוד טקסט לפי האות הראשונה + אימות לפי מיקום aragon2id</h1>
+  <section class="card">
+    <input id="txt" placeholder="הכנס טקסט לדוגמה (למשל: דוד המלך)" />
+    <button id="btnEncode">קידוד ושמירה</button>
+    <button id="btnClear" class="secondary">נקה הכל</button>
+    <div id="out" class="mono" style="margin-top:10px"></div>
+  </section>
+  <section class="card">
+    <h3>ערכים שמורים</h3>
+    <div id="saved" class="list"></div>
+  </section>
+</div>
+<script>
+(function(){
+  const hebrewLetters="אבגדהוזחטיכלמנסעפצקרשת";
+  const finals="ךםןףץ";
+  const englishLower="abcdefghijklmnopqrstuvwxyz";
+  const englishUpper=englishLower.toUpperCase();
+  const digits="0123456789";
+  const symbols="?/<.>,|\\:;{[}]+=_-()*&^%$#@!~`'"; 
+  const charset=Array.from(new Set((hebrewLetters+finals+englishLower+englishUpper+digits+symbols+' ').split('')));
+  const KEY='encoder_entries_v5';
+  const loadAll=()=>JSON.parse(localStorage.getItem(KEY)||'[]');
+  const saveAll=(a)=>localStorage.setItem(KEY,JSON.stringify(a));
+  const out=document.getElementById('out');
+  const txt=document.getElementById('txt');
+  const saved=document.getElementById('saved');
+
+  async function encode(){
+    const text=txt.value.trim();if(!text)return;
+    const chars=[...text];
+    const first=chars[0];
+    const salt=crypto.getRandomValues(new Uint8Array(16));
+    const res=await argon2.hash({pass:first,salt,type:argon2.ArgonType.Argon2id,time:3,mem:4096,parallelism:1,hashLen:32});
+    const baseIdx=charset.indexOf(first);
+    const distances=[];const explain=[];
+    for(let i=1;i<chars.length;i++){
+      const curIdx=charset.indexOf(chars[i]);const d=curIdx-baseIdx;
+      distances.push(d);
+      explain.push(`${chars[i]} => index(${curIdx}) - index(${baseIdx}) = ${d}`);
+    }
+    const entry={id:crypto.randomUUID(),text,firstChar:first,hash:res.hashHex,saltHex:Array.from(salt).map(b=>b.toString(16).padStart(2,'0')).join(''),distances,explain,createdAt:new Date().toLocaleString()};
+    const all=loadAll();all.unshift(entry);saveAll(all);renderSaved();renderOut(entry);
+  }
+
+  function renderOut(e){
+    out.innerHTML=`אות ראשונה: ${e.firstChar}\nHash: ${e.hash}\nSalt: ${e.saltHex}\nמרחקים: [${e.distances.join(', ')}]\n\n${e.explain.join('\n')}`;
+  }
+
+  function renderSaved(){
+    const all=loadAll();if(!all.length){saved.innerHTML='<div class="small">אין נתונים.</div>';return;}
+    saved.innerHTML=all.map(e=>`
+      <div class='item'>
+        <div>${e.createdAt} • ${e.text}</div>
+        <div class='flex'>
+          <button class='secondary btnView' data-id='${e.id}'>הצג</button>
+          <button class='secondary btnPick' data-id='${e.id}'>בחר</button>
+          <button class='secondary btnRand' data-id='${e.id}'>בדוק רנדומלית</button>
+          <button class='secondary btnDel' data-id='${e.id}'>מחק</button>
+        </div>
+      </div>`).join('');
+
+    saved.querySelectorAll('.btnView').forEach(b=>b.onclick=(ev)=>{const id=ev.target.dataset.id;const e=loadAll().find(x=>x.id===id);renderOut(e);});
+    saved.querySelectorAll('.btnDel').forEach(b=>b.onclick=(ev)=>{const id=ev.target.dataset.id;const all=loadAll().filter(x=>x.id!==id);saveAll(all);renderSaved();});
+    saved.querySelectorAll('.btnPick').forEach(b=>b.onclick=(ev)=>{const id=ev.target.dataset.id;openCheck(id);});
+    saved.querySelectorAll('.btnRand').forEach(b=>b.onclick=(ev)=>{const id=ev.target.dataset.id;openRandomCheck(id);});
+  }
+
+  function openCheck(id){
+    const e=loadAll().find(x=>x.id===id);if(!e)return;
+    const div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`<h4>בדיקה מול ${e.text}</h4>
+    <div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>
+      <label>אות לבדיקה:</label><input id='chkChar' maxlength='1' style='width:60px'/>
+      <label>מיקום:</label><input id='chkPos' type='number' min='2' max='${e.distances.length+1}' style='width:70px'/>
+      <button id='btnVerify'>בדוק</button>
+    </div>
+    <div id='chkResult' class='mono small' style='margin-top:10px'></div>`;
+    document.body.appendChild(div);
+    div.querySelector('#btnVerify').onclick=async()=>{
+      const ch=div.querySelector('#chkChar').value.trim();
+      const pos=parseInt(div.querySelector('#chkPos').value);
+      const idx=pos-2;
+      if(idx<0||idx>=e.distances.length)return alert('מיקום לא חוקי');
+      const distance=e.distances[idx];
+      const baseIdx=charset.indexOf(ch)-distance;
+      const baseChar=charset[baseIdx];
+      const res=await argon2.hash({pass:baseChar,salt:Uint8Array.from(e.saltHex.match(/.{1,2}/g).map(x=>parseInt(x,16))),type:argon2.ArgonType.Argon2id,time:3,mem:4096,parallelism:1,hashLen:32});
+      const ok=res.hashHex===e.hash;
+      div.querySelector('#chkResult').innerHTML=`אות מחושבת: ${baseChar}<br>Hash תואם: <b style='color:${ok?'#16a34a':'#dc2626'}'>${ok?'כן':'לא'}</b>`;
+    };
+  }
+
+  function openRandomCheck(id){
+    const e=loadAll().find(x=>x.id===id);if(!e)return;
+    const validPositions=[];
+    for(let i=1;i<e.text.length;i++) if(e.text[i] !== ' ') validPositions.push(i+1);
+    const randPos = validPositions[Math.floor(Math.random()*validPositions.length)];
+    const question=`מה האות שנמצאת במיקום ${randPos}?`;
+
+    const div=document.createElement('div');
+    div.className='card';
+    div.innerHTML=`<h4>בדיקה רנדומלית מול ${e.text}</h4>
+    <p>${question}</p>
+    <div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>
+      <label>הכנס אות:</label><input id='ansChar' maxlength='1' style='width:60px'/>
+      <button id='btnAnswer'>בדוק</button>
+    </div>
+    <div id='ansResult' class='mono small' style='margin-top:10px'></div>`;
+    document.body.appendChild(div);
+
+    div.querySelector('#btnAnswer').onclick=async()=>{
+      const ch=div.querySelector('#ansChar').value.trim();
+      const idx=randPos-2;
+      if(idx<0||idx>=e.distances.length)return alert('מיקום לא חוקי');
+      const distance=e.distances[idx];
+      const baseIdx=charset.indexOf(ch)-distance;
+      const baseChar=charset[baseIdx];
+      const res=await argon2.hash({pass:baseChar,salt:Uint8Array.from(e.saltHex.match(/.{1,2}/g).map(x=>parseInt(x,16))),type:argon2.ArgonType.Argon2id,time:3,mem:4096,parallelism:1,hashLen:32});
+      const ok=res.hashHex===e.hash;
+      div.querySelector('#ansResult').innerHTML=`אות מחושבת: ${baseChar}<br>Hash תואם: <b style='color:${ok?'#16a34a':'#dc2626'}'>${ok?'כן':'לא'}</b>`;
+    };
+  }
+
+  document.getElementById('btnEncode').onclick=encode;
+  document.getElementById('btnClear').onclick=()=>{localStorage.removeItem(KEY);renderSaved();out.innerHTML='';};
+  renderSaved();
+})();
+</script>
+</body>
+</html>
